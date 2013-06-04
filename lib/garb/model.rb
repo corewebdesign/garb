@@ -8,14 +8,28 @@ module Garb
       ProfileReports.add_report_method(base)
     end
 
-    def metrics(*fields)
+    # def metrics(*fields)
+    #   @metrics ||= ReportParameter.new(:metrics)
+    #   @metrics << fields
+    # end
+
+    # def dimensions(*fields)
+    #   @dimensions ||= ReportParameter.new(:dimensions)
+    #   @dimensions << fields
+    # end
+
+    def custom_metrics(options)
       @metrics ||= ReportParameter.new(:metrics)
-      @metrics << fields
+      @metrics << options[:metrics] if options.has_key?(:metrics)
     end
 
-    def dimensions(*fields)
+    def custom_dimensions(options)
       @dimensions ||= ReportParameter.new(:dimensions)
-      @dimensions << fields
+      if options.has_key?(:dimensions)
+        @dimensions << options[:dimensions]
+      else
+        @dimensions << {}
+      end
     end
 
     def set_instance_klass(klass)
@@ -35,8 +49,8 @@ module Garb
 
       param_set = [
         default_params,
-        metrics.to_params,
-        dimensions.to_params,
+        custom_metrics(options).to_params,
+        custom_dimensions(options).to_params,
         parse_filters(options).to_params,
         parse_segment(options),
         parse_sort(options).to_params,
@@ -55,13 +69,13 @@ module Garb
           ? results.concat(rs.to_a)
           : results = rs
         options[:offset] = results.size + 1
-        
+
         break if limit and results.size >= limit
         break if results.size >= results.total_results
       end
       limit ? results[0...limit] : results
     end
-    
+
     private
     def send_request_for_data(profile, params)
       request = Request::Data.new(profile.session, URL, params)
